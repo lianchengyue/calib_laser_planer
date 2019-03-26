@@ -20,6 +20,8 @@ extern vector<vector<LinearFunctionCoefficients>> cornerPointLineCoeffs;   //ln�
 
 vector<vector<cv::Point2d>> cross_PtSet;
 
+vector<PlanarFunctionCoefficients> BoardPlaneCoeffs;//标定板平面坐标系数
+
 //https://blog.csdn.net/zwzsdy/article/details/69935602
 void Doolittle(int n,double *A,double *b)//n为阶数 A为系数矩阵 b为常数矩阵
 {
@@ -160,6 +162,8 @@ int main(int argc, char *argv[])
     //0:标定
     CameraCalib();
 
+#if 0
+//test
     ///1:init内参
     Intrinsics.at<double>(0, 2) = 644.6466866645241;  //u0
     Intrinsics.at<double>(1, 2) = 482.6045579244723;  //v0
@@ -184,9 +188,9 @@ int main(int argc, char *argv[])
         tvecsMat[i].at<double>(0, 1) = 29.25313600086886;
         tvecsMat[i].at<double>(0, 2) = 417.0198668690805;
 
-        std::cout << "旋转向量" << rvecsMat << endl;
+        std::cout << "旋转向量" << rvecsMat[i] << endl;
         Rodrigues(rvecsMat[i], rotation_matrix[i]);
-        std::cout << "旋转矩阵" << rotation_matrix << endl;
+        std::cout << "旋转矩阵" << rotation_matrix[i] << endl;
     }
 
     ///3:外参的旋转与平移矩阵  [R T 0 1]
@@ -211,9 +215,34 @@ int main(int argc, char *argv[])
         RT[i].at<double>(3, 1) = 0;
         RT[i].at<double>(3, 2) = 0;
         RT[i].at<double>(3, 3) = 1;
-        std::cout << "camera RT矩阵:" << endl << RT << endl;
+        std::cout << "camera RT矩阵:" << endl << RT[i] << endl;
     }
+#else
+    ///1,2,3:外参的旋转与平移矩阵  [R T 0 1]
+    for(i=0; i<PicNum; i++)
+    {
+        RT[i].at<double>(0, 0) = metadata_of_pic.mPic_rotationMatrixSet[i].at<double>(0, 0);
+        RT[i].at<double>(0, 1) = metadata_of_pic.mPic_rotationMatrixSet[i].at<double>(0, 1);
+        RT[i].at<double>(0, 2) = metadata_of_pic.mPic_rotationMatrixSet[i].at<double>(0, 2);
+        RT[i].at<double>(0, 3) = metadata_of_pic.mPic_tvecsMatSet[i].at<double>(0, 0);
 
+        RT[i].at<double>(1, 0) = metadata_of_pic.mPic_rotationMatrixSet[i].at<double>(1, 0);
+        RT[i].at<double>(1, 1) = metadata_of_pic.mPic_rotationMatrixSet[i].at<double>(1, 1);
+        RT[i].at<double>(1, 2) = metadata_of_pic.mPic_rotationMatrixSet[i].at<double>(1, 2);
+        RT[i].at<double>(1, 3) = metadata_of_pic.mPic_tvecsMatSet[i].at<double>(0, 1);
+
+        RT[i].at<double>(2, 0) = metadata_of_pic.mPic_rotationMatrixSet[i].at<double>(2, 0);
+        RT[i].at<double>(2, 1) = metadata_of_pic.mPic_rotationMatrixSet[i].at<double>(2, 1);
+        RT[i].at<double>(2, 2) = metadata_of_pic.mPic_rotationMatrixSet[i].at<double>(2, 2);
+        RT[i].at<double>(2, 3) = metadata_of_pic.mPic_tvecsMatSet[i].at<double>(0, 2);
+
+        RT[i].at<double>(3, 0) = 0;
+        RT[i].at<double>(3, 1) = 0;
+        RT[i].at<double>(3, 2) = 0;
+        RT[i].at<double>(3, 3) = 1;
+        std::cout << "camera RT矩阵:" << endl << RT[i] << endl;
+    }
+#endif
     ///4:C = RT x W,获取棋盘格上的点在相机坐标系下的p3d
     //从图像中取3D点,世界3D->相机3D
 #ifdef TEST
@@ -259,6 +288,11 @@ int main(int argc, char *argv[])
                 points3d.y = PointC.at<double>(1, 0);
                 points3d.z = PointC.at<double>(2, 0);
                 tempPointSet.push_back(points3d);
+
+                if (0 == i && 0 == j)
+                {
+                    printf("\n第%d张照片的第一个角点的相机坐标系空间坐标:(%f,%f,%f)\n", n, points3d.x, points3d.y, points3d.z);
+                }
                 //added end
 
                 //add for FitPlane
@@ -311,7 +345,7 @@ int main(int argc, char *argv[])
             //获取逐条角点连线的空间方程
             Get3DLinearValue(p3d);
         }
-
+        //continue;  //only for add breakpoint
     }
 
 /*
@@ -333,9 +367,9 @@ int main(int argc, char *argv[])
 */
 #endif
     ///5.1:拟合标定板平面
-#if 0
+#if 1
     vector<Point3d> BoardP3d(BOARD_SIZE_X * BOARD_SIZE_Y);
-    cv::Mat InputPoints = cv::Mat::ones(BOARD_SIZE_X*BOARD_SIZE_Y,3,CV_32FC1/*CV_64FC1*/);//cv::Mat::ones(rows,cols,CV_32FC1);
+    cv::Mat InputPoints = cv::Mat::ones(BOARD_SIZE_X*BOARD_SIZE_Y,3,CV_64FC1);//cv::Mat::ones(rows,cols,CV_32FC1);
 
     for(int n=0; n<PicNum; n++)
     {
@@ -343,16 +377,24 @@ int main(int argc, char *argv[])
         {
             for(int j=0; j<BOARD_SIZE_X; j++) //width
             {
+                //图片n中相机坐标系所有的3D点坐标
                 InputPoints.at<double>(i*BOARD_SIZE_X + j, 0) = metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].x;
                 InputPoints.at<double>(i*BOARD_SIZE_X + j, 1) = metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].y;
                 InputPoints.at<double>(i*BOARD_SIZE_X + j, 2) = metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].z;
-                printf("AAInputPoints=(%f,%f,%f)\n",InputPoints.at<double>(i, 0),InputPoints.at<double>(i, 1),InputPoints.at<double>(i, 2));
+                printf("AAInputPoints=(%f,%f,%f)\n",InputPoints.at<double>(i*BOARD_SIZE_X + j, 0), (i*BOARD_SIZE_X + j, 1), (i*BOARD_SIZE_X + j, 2));
 
             }
         }
         //拟合标定板的平面
-        Mat plane;
-        FitPlane(InputPoints, plane);
+        Mat BoardPlane;
+        FitPlane(InputPoints, BoardPlane);
+        //赋值
+        PlanarFunctionCoefficients tmpPlanarCoeff;
+        tmpPlanarCoeff.a = BoardPlane.at<double>(0,0);
+        tmpPlanarCoeff.b = BoardPlane.at<double>(1,0);
+        tmpPlanarCoeff.c = BoardPlane.at<double>(2,0);
+        tmpPlanarCoeff.d = -BoardPlane.at<double>(3,0);
+        BoardPlaneCoeffs.push_back(tmpPlanarCoeff);
     }
 #else
     //测试用
@@ -379,8 +421,16 @@ int main(int argc, char *argv[])
         InputPoints.at<double>(i, 2) = Z_vector[i]; //  Z的坐标值
         printf("InputPoints=(%f,%f,%f)\n",InputPoints.at<double>(i, 0),InputPoints.at<double>(i, 1),InputPoints.at<double>(i, 2));
     }
-    Mat plane;
-    FitPlane(InputPoints, plane);
+    //拟合标定板的平面
+    Mat BoardPlane;
+    FitPlane(InputPoints, BoardPlane);
+    //赋值
+    PlanarFunctionCoefficients tmpPlanarCoeff;
+    tmpPlanarCoeff.a = BoardPlane.at<double>(0,0);
+    tmpPlanarCoeff.b = BoardPlane.at<double>(1,0);
+    tmpPlanarCoeff.c = BoardPlane.at<double>(2,0);
+    tmpPlanarCoeff.d = -BoardPlane.at<double>(3,0);
+    BoardPlaneCoeffs.push_back(tmpPlanarCoeff);
 #endif
     ///6,7,8:计算激光平面与ln延长线的交点
     ///6:计算激光线在像素坐标系的方程Ax+By+c=0

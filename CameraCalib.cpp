@@ -198,6 +198,7 @@ int CameraCalib()
     /* 开始标定 */
     //获取cameraMatrix,distCoeffs,rvecsMat,tvecsMat
     calibrateCamera(object_points,image_points_seq,image_size,cameraMatrix,distCoeffs,rvecsMat,tvecsMat,0); //0 or flags|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5
+
     metadata_of_pic.mPic_Intrinsics = cameraMatrix;
     metadata_of_pic.mPic_DistCoeffs = distCoeffs;
     cout << " metadata_of_pic.mPic_Intrinsics:" << endl <<  metadata_of_pic.mPic_Intrinsics << endl;
@@ -214,8 +215,10 @@ int CameraCalib()
     for (i=0;i<image_count;i++)
     {
         vector<Point3f> tempPointSet=object_points[i];
+
         /* 通过得到的摄像机内外参数，对空间的三维点进行重新投影计算，得到新的投影点 */
         projectPoints(tempPointSet,rvecsMat[i],tvecsMat[i],cameraMatrix,distCoeffs,image_points2);
+
         /* 计算新的投影点和旧的投影点之间的误差*/
         vector<Point2f> tempImagePoint = image_points_seq[i];
         Mat tempImagePointMat = Mat(1,tempImagePoint.size(),CV_32FC2);

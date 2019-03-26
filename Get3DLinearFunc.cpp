@@ -117,6 +117,8 @@ int Get3DLinearValue(std::vector<cv::Point3d> PrimiDataSet)
     long PtSum = PrimiDataSet.size();
 
 
+    //引入噪声，only for 测试
+#ifdef DEBUG
     for (int i = 0; i < PtSum;i++)
     {
         array[i][0] = PrimiDataSet[i].x + rand()/(RAND_MAX+1.0)/10;  //引入噪声 rand()/RAND_MAX
@@ -125,6 +127,16 @@ int Get3DLinearValue(std::vector<cv::Point3d> PrimiDataSet)
         //printf("rand()%2=%lf,array[i][0]=%lf\n", rand()%2, array[i][0]);
         printf("Point%d:(%lf,%lf,%lf)\n",i, array[i][0], array[i][1], array[i][2]);
     }
+#elif
+    for (int i = 0; i < PtSum;i++)
+    {
+        array[i][0] = PrimiDataSet[i].x;  //引入噪声 rand()/RAND_MAX
+        array[i][1] = PrimiDataSet[i].y; // rand()/(RAND_MAX+1.0)/10;  //引入噪声
+        array[i][2] = PrimiDataSet[i].z;
+        //printf("rand()%2=%lf,array[i][0]=%lf\n", rand()%2, array[i][0]);
+        printf("Point%d:(%lf,%lf,%lf)\n",i, array[i][0], array[i][1], array[i][2]);
+    }
+#endif
 
     double X0,Y0,m,n;//这是待拟合的四个参数，已知分别对应：1、2、3、2现在我们来拟合
     for (int i = 0;i < 2;i++)
