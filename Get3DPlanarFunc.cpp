@@ -6,10 +6,10 @@ using namespace cv;
  *
  *
  *  最小二乘拟合平面，平面方程：Ax+By+Cz=D
- *  A = plane.at<float>(0,0)
- *  B = plane.at<float>(1,0)
- *  C = plane.at<float>(2,0)
- *  D = plane.at<float>(3,0)
+ *  A = plane.at<double>(0,0)
+ *  B = plane.at<double>(1,0)
+ *  C = plane.at<double>(2,0)
+ *  D = plane.at<double>(3,0)
  *
  * */
 //Param1:输入的空间坐标点

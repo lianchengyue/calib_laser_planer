@@ -22,8 +22,8 @@ typedef struct _MetadataFromPic
     //2D
     std::vector<std::vector<Point2f>> mPic_2DChessboardPointSet;
     //3D
-    std::vector<std::vector<cv::Point3f>> mPic_WorldChessboardPointSet;  //(0,0,0)~(0,m,n)
-    std::vector<std::vector<cv::Point3f>> mPic_CameraChessboardPointSet;  //(0,0,0)~(0,m,n)
+    std::vector<std::vector<cv::Point3f>> mPic_WorldChessboardPointSet;  //(0,0,0)~(0,m,n)//获取到的float型
+    std::vector<std::vector<cv::Point3d>> mPic_CameraChessboardPointSet;  //(0,0,0)~(0,m,n)
     //3d Mat
     std::vector<std::vector<cv::Mat>> mPic_WorldChessboard4NumPointSet;  //(0,0,0,1)~(0,m,n,1) //Mat PointW
     std::vector<std::vector<cv::Mat>> mPic_CameraChessboard4NumPointSet;  //在相机坐标系的位置

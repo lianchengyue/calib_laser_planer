@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
     for(int n=0; n<PicNum; n++)
     {
         vector<Mat> tempCamera4NumPointSet;
-        vector<Point3f> tempPointSet;
+        vector<Point3d> tempPointSet;
         //将PointC转换为points3d,作为输出
         Mat PointC;
         Point3d points3d;
@@ -348,6 +348,7 @@ int main(int argc, char *argv[])
         //continue;  //only for add breakpoint
     }
 
+
 /*
     vector<Point3d>  p3d(4);
     p3d[0].x = metadata_of_pic.mPic_CameraChessboardPointSet[0][0].x;
@@ -381,7 +382,10 @@ int main(int argc, char *argv[])
                 InputPoints.at<double>(i*BOARD_SIZE_X + j, 0) = metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].x;
                 InputPoints.at<double>(i*BOARD_SIZE_X + j, 1) = metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].y;
                 InputPoints.at<double>(i*BOARD_SIZE_X + j, 2) = metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].z;
-                printf("AAInputPoints=(%f,%f,%f)\n",InputPoints.at<double>(i*BOARD_SIZE_X + j, 0), (i*BOARD_SIZE_X + j, 1), (i*BOARD_SIZE_X + j, 2));
+                //printf("mPic_CameraChessboardPointSet=(%f,%f,%f)\n",metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].x, metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].y, metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].z);
+        //error        //printf("AAInputPoints=(%f,%f,%f)\n",InputPoints.at<float>(i*BOARD_SIZE_X + j, 0), (i*BOARD_SIZE_X + j, 1), (i*BOARD_SIZE_X + j, 2));
+                //ok
+                printf("AAInputPoints=(%f,%f,%f)\n", InputPoints.at<double>(i*BOARD_SIZE_X + j, 0), InputPoints.at<double>(i*BOARD_SIZE_X + j, 1), InputPoints.at<double>(i*BOARD_SIZE_X + j, 2));
 
             }
         }

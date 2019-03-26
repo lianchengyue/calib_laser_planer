@@ -118,7 +118,7 @@ int Get3DLinearValue(std::vector<cv::Point3d> PrimiDataSet)
 
 
     //引入噪声，only for 测试
-#ifdef DEBUG
+#if 0//def DEBUG
     for (int i = 0; i < PtSum;i++)
     {
         array[i][0] = PrimiDataSet[i].x + rand()/(RAND_MAX+1.0)/10;  //引入噪声 rand()/RAND_MAX
@@ -127,7 +127,7 @@ int Get3DLinearValue(std::vector<cv::Point3d> PrimiDataSet)
         //printf("rand()%2=%lf,array[i][0]=%lf\n", rand()%2, array[i][0]);
         printf("Point%d:(%lf,%lf,%lf)\n",i, array[i][0], array[i][1], array[i][2]);
     }
-#elif
+#else
     for (int i = 0; i < PtSum;i++)
     {
         array[i][0] = PrimiDataSet[i].x;  //引入噪声 rand()/RAND_MAX
