@@ -17,7 +17,7 @@
 //同理可得:
 //y = (a1*c0 - a0*c1)/D
 //D = a0*b1 - a1*b0， (D为0时，表示两直线平行)
-int GetCrossPoint(vector<vector<LinearFuncCoefficients>> mycornerPointLineCoeffs, LinearFuncCoefficients mylaserLineCoeffs, vector<vector<cv::Point2d>>& cross_PtSet, int PicNum, int board_size_y)
+int GetCrossPoint(vector<vector<LinearFunctionCoefficients>> mycornerPointLineCoeffs, LinearFunctionCoefficients mylaserLineCoeffs, vector<vector<cv::Point2d>>& cross_PtSet, int PicNum, int board_size_y)
 {
     double a0,b0,c0 = 0;
     double a1,b1,c1 = 0;

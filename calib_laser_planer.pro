@@ -11,19 +11,22 @@ TEMPLATE = app
 
 DEFINES+= \
     DEBUG \
+    GUI \
 
 HEADERS += \
     Get3DLinearFunc.h \
     Get2DLinearFunc.h \
     CameraCalib.h \
     LineCross.h \
-    utils.h
+    utils.h \
+    Get3DPlanarFunc.h
 
 SOURCES += main.cpp \
     Get3DLinearFunc.cpp \
     Get2DLinearFunc.cpp \
     CameraCalib.cpp \
-    LineCross.cpp
+    LineCross.cpp \
+    Get3DPlanarFunc.cpp
 
 INCLUDEPATH += \
 /usr/local/opencv2.4.13/include \

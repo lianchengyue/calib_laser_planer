@@ -9,12 +9,12 @@
 #include "opencv2/highgui/highgui.hpp"
 
 //a*x + b*y + c = 0
-typedef struct LinearFuncCoefficients
+typedef struct LinearFunctionCoefficients
 {
     double a;
     double b;
     double c;
-} LinearFuncCoefficients;
+} LinearFunctionCoefficients;
 
 int StegerLine(std::vector<cv::Point2d> &p2d);
 int StegerLine2(char* filename,std::vector<cv::Point2d> &p2d);

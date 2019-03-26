@@ -9,13 +9,14 @@
 #include "Get3DLinearFunc.h"
 #include "CameraCalib.h"
 #include "LineCross.h"
+#include "Get3DPlanarFunc.h"
 
 using namespace std;
 using namespace cv;
 
 extern MetadataFromPic metadata_of_pic;
-extern LinearFuncCoefficients laserLineCoeffs;  //一条激光线在图像上坐标的直线方程
-extern vector<vector<LinearFuncCoefficients>> cornerPointLineCoeffs;   //ln在平面上的投影
+extern LinearFunctionCoefficients laserLineCoeffs;  //一条激光线在图像上坐标的直线方程
+extern vector<vector<LinearFunctionCoefficients>> cornerPointLineCoeffs;   //ln在平面上的投影
 
 vector<vector<cv::Point2d>> cross_PtSet;
 
@@ -259,6 +260,10 @@ int main(int argc, char *argv[])
                 points3d.z = PointC.at<double>(2, 0);
                 tempPointSet.push_back(points3d);
                 //added end
+
+                //add for FitPlane
+                //xxx
+                //added end
             }
         }
         //副产品
@@ -267,7 +272,6 @@ int main(int argc, char *argv[])
         metadata_of_pic.mPic_CameraChessboardPointSet.push_back(tempPointSet);
     }
     std::cout << "KKKmetadata_of_pic.mPic_CameraChessboard4NumPointSet[0]\n:" << metadata_of_pic.mPic_CameraChessboard4NumPointSet[0][2] << endl;
-
 
 #endif
     ///5:计算得到ln, 即多点拟合空间中的直线
@@ -328,7 +332,56 @@ int main(int argc, char *argv[])
     Get3DLinearValue(p3d);
 */
 #endif
+    ///5.1:拟合标定板平面
+#if 0
+    vector<Point3d> BoardP3d(BOARD_SIZE_X * BOARD_SIZE_Y);
+    cv::Mat InputPoints = cv::Mat::ones(BOARD_SIZE_X*BOARD_SIZE_Y,3,CV_32FC1/*CV_64FC1*/);//cv::Mat::ones(rows,cols,CV_32FC1);
 
+    for(int n=0; n<PicNum; n++)
+    {
+        for(int i=0; i<BOARD_SIZE_Y; i++) //height
+        {
+            for(int j=0; j<BOARD_SIZE_X; j++) //width
+            {
+                InputPoints.at<double>(i*BOARD_SIZE_X + j, 0) = metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].x;
+                InputPoints.at<double>(i*BOARD_SIZE_X + j, 1) = metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].y;
+                InputPoints.at<double>(i*BOARD_SIZE_X + j, 2) = metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].z;
+                printf("AAInputPoints=(%f,%f,%f)\n",InputPoints.at<double>(i, 0),InputPoints.at<double>(i, 1),InputPoints.at<double>(i, 2));
+
+            }
+        }
+        //拟合标定板的平面
+        Mat plane;
+        FitPlane(InputPoints, plane);
+    }
+#else
+    //测试用
+    /*
+        double x_point[] = { 1, 2, 1, 4, 2, 6, 7, 3, 9 };
+        double y_point[] = { 1, 1, 3, 4, 5, 2, 7, 8, 2 };
+        double z_point[] = { 91, 102, 103, 104, 105, 106, 107, 108, 109 };
+    */
+    ///*
+        double x_point[] = { 0, 0, 0, 1, 1, 1, 2, 2, 2 };
+        double y_point[] = { 0, 1, 2, 0, 1, 2, 0, 1, 2 };
+        double z_point[] = { 10, 10, 10, 10, 10, 10, 10, 10, 10 };
+    //*/
+    vector<double> X_vector(x_point, x_point + 9);
+    vector<double> Y_vector(y_point, y_point + 9);
+    vector<double> Z_vector(z_point, z_point + 9);
+
+    cv::Mat InputPoints = cv::Mat::ones(X_vector.size(), 3, CV_64FC1/*CV_32FC1*/);//定义用来存储需要拟合点的矩阵
+    printf("InputPoints Adress:0x%x\n", &InputPoints);
+    for (int i = 0; i < X_vector.size(); ++i)
+    {
+        InputPoints.at<double>(i, 0) = X_vector[i];//矩阵的值进行初始化   X的坐标值
+        InputPoints.at<double>(i, 1) = Y_vector[i];//  Y的坐标值
+        InputPoints.at<double>(i, 2) = Z_vector[i]; //  Z的坐标值
+        printf("InputPoints=(%f,%f,%f)\n",InputPoints.at<double>(i, 0),InputPoints.at<double>(i, 1),InputPoints.at<double>(i, 2));
+    }
+    Mat plane;
+    FitPlane(InputPoints, plane);
+#endif
     ///6,7,8:计算激光平面与ln延长线的交点
     ///6:计算激光线在像素坐标系的方程Ax+By+c=0
 #ifdef TEST
@@ -374,7 +427,7 @@ int main(int argc, char *argv[])
 
 
     ///9:得到激光平面与ln的各个坐标Pi(xp,yp,zp)
-#if 1//def TEST
+#ifdef TEST
     //原理:https://blog.csdn.net/lyl771857509/article/details/79633412
     //给3x4的相机内参矩阵赋值
     CameraMatrix.at<double>(0, 0) = Intrinsics.at<double>(0, 0);
@@ -448,7 +501,80 @@ int main(int argc, char *argv[])
     double InB[3] = {0,0,-dd};
     Doolittle(3, InA, InB);
 #else
+    //原理:https://blog.csdn.net/lyl771857509/article/details/79633412
+    //给3x4的相机内参矩阵赋值
+    CameraMatrix.at<double>(0, 0) = Intrinsics.at<double>(0, 0);
+    CameraMatrix.at<double>(0, 1) = Intrinsics.at<double>(0, 0);
+    CameraMatrix.at<double>(0, 2) = Intrinsics.at<double>(0, 0);
+    CameraMatrix.at<double>(0, 3) = 0;
+    CameraMatrix.at<double>(1, 0) = Intrinsics.at<double>(1, 0);
+    CameraMatrix.at<double>(1, 1) = Intrinsics.at<double>(1, 0);
+    CameraMatrix.at<double>(1, 2) = Intrinsics.at<double>(1, 0);
+    CameraMatrix.at<double>(1, 3) = 0;
+    CameraMatrix.at<double>(2, 0) = Intrinsics.at<double>(2, 0);
+    CameraMatrix.at<double>(2, 1) = Intrinsics.at<double>(2, 0);
+    CameraMatrix.at<double>(2, 2) = Intrinsics.at<double>(2, 0);
+    CameraMatrix.at<double>(2, 3) = 0;
 
+    //2D点+已知平面，得到相机坐标系下的3D坐标    2D点:cross_PtSet[n][i];
+    Point2d  testp2d;
+    testp2d.x = 740;   //u
+    testp2d.y = 580;   //v
+    double aa = 1;
+    double bb = 2;
+    double cc = 3;
+    double dd = -1400;//-1400;
+
+    Mat _2Dto3DMat = Mat(3,3,CV_64FC1,Scalar::all(0));
+
+    for(int n=0; n<PicNum; n++)
+    {
+        for(int i=0; i<BOARD_SIZE_Y; i++)
+        {
+            //Zc*[u,v,1] = CameraMatrix(3X4) * [Xc,Yc,Zc,1]
+            //|
+            //v
+            //fx*Xc + u0*Zc + 0*1= u*Zc
+            //fy*Yc + v0*Zc + 0*1= v*Zc
+            //Zc = Zc
+            //A*Xc + B*Yc + C*Zc + D = 0
+            //|
+            //v
+            //fx*Xc + (u0-u)*Zc = 0
+            //fy*Yc + (v0-v)*Zc = 0
+            //A*Xc + B*Yc + C*Zc = -D
+            //|
+            //v
+            //[fx, 0, (u0-u)]   [Xc]   [0 ]
+            //[0, fy, (v0-v)] * [Yc] = [0 ]
+            //[A,  B,    C  ]   [Zc]   [-D]
+            _2Dto3DMat.at<double>(0, 0) = Intrinsics.at<double>(0, 0);
+            _2Dto3DMat.at<double>(0, 1) = 0;
+            _2Dto3DMat.at<double>(0, 2) = Intrinsics.at<double>(0, 2) - cross_PtSet[n][i].x;// -u
+            _2Dto3DMat.at<double>(1, 0) = 0;
+            _2Dto3DMat.at<double>(1, 1) = Intrinsics.at<double>(1, 1);
+            _2Dto3DMat.at<double>(1, 2) = Intrinsics.at<double>(1, 2) - cross_PtSet[n][i].y;// -v
+            _2Dto3DMat.at<double>(2, 0) = aa;
+            _2Dto3DMat.at<double>(2, 1) = bb;
+            _2Dto3DMat.at<double>(2, 2) = cc;
+#if 0//def DEBUG
+            std::cout << "_2Dto3DMat" << endl << _2Dto3DMat << endl;
+#endif
+
+            Mat _00D = (Mat_<double>(3, 1) << 0, 0, -dd);
+
+            Mat XcYcZc;
+            //CV_LU - 最佳主元选取的高斯消除法
+            //CV_SVD - 奇异值分解法 (SVD)
+            //CV_SVD_SYM - 对正定对称矩阵的 SVD 方法
+            cv::solve(_2Dto3DMat, _00D, XcYcZc, CV_LU);  //DECOMP_LU
+            //SVD::solveZ(_2Dto3DMat, _00D, XcYcZc);
+#ifdef DEBUG
+            std::cout << "第" << n << "张图的第" << i <<"个激光与角点连线的交点:XcYcZc" << XcYcZc<< endl;
+#endif
+        }
+
+    }
 #endif
     ///9:通过计算得到的多个3D激光点，拟合得到空间中激光平面与标定板平面的3D直线
     ///10:得到多组图像标定板与激光平面的N个交点，拟合激光平面.  ("N个交点"为ln与激光平面的交点)

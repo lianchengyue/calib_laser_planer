@@ -6,8 +6,8 @@ using namespace cv;
 
 extern MetadataFromPic metadata_of_pic;
 
-LinearFuncCoefficients laserLineCoeffs;  //一条激光线在图像上坐标的直线方程
-vector<vector<LinearFuncCoefficients>> cornerPointLineCoeffs;   //ln在平面上的投影
+LinearFunctionCoefficients laserLineCoeffs;  //一条激光线在图像上坐标的直线方程
+vector<vector<LinearFunctionCoefficients>> cornerPointLineCoeffs;   //ln在平面上的投影
 
 ///从图像中计算得到亚像素级的二维点
 ///ScanThread::FindBrightestPointInRow,找到每一行中最亮的点
@@ -128,7 +128,7 @@ int StegerLine(std::vector<cv::Point2d> &p2d)
 
 int StegerLine2(char* filename,std::vector<cv::Point2d> &p2d)
 {
-    Mat img0 = imread(filename, 1); //0_laser.jpg  //2.bmp
+    Mat img0 = imread(filename, 1); //0_laser.jpg
     Mat img;
     cvtColor(img0, img0, CV_BGR2GRAY);
     img = img0.clone();
@@ -291,15 +291,10 @@ bool lineFit(/*const */std::vector<cv::Point2d> &points, double &a, double &b, d
 
 }
 
+//获取所有图像的激光直线方程ax+by+c=0
 int Get2DLaserliner(int picnum)
 {
-#ifdef XXX
-    double a;
-    double b;
-    double c;
-#else
     //LinearFuncCoefficients laserLineCoeffs;  ////to global
-#endif
 
     vector<Point2d>  p2d;
 
@@ -315,14 +310,26 @@ int Get2DLaserliner(int picnum)
         StegerLine2(filename, p2d);
         ///2:拟合,激光条投影在标定板上的直线
         //根据得到的激光点拟合直线
-#ifdef XXX
-        lineFit(p2d, a, b, c);
-        printf("a x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", a, b, c);
-        printf("a=%lf, b=%lf, c=%lf = 0\n", a, b, c);
-#else
+
+        //为laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c赋值
         lineFit(p2d, laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c);
-        printf("XXXXXXXa x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c);
-        printf("XXXXXXXa=%lf, b=%lf, c=%lf = 0\n", laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c);
+        printf("a x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c);
+        printf("a=%lf, b=%lf, c=%lf = 0\n", laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c);
+
+#ifdef GUI
+        Point2d PtStart , PtEnd;
+        Mat frame=imread(filename);
+
+
+        PtStart.x = 0;
+        PtStart.y = -laserLineCoeffs.c/laserLineCoeffs.b;  // -c/b
+
+        PtEnd.x = frame.cols - 1;
+        PtEnd.y = (-laserLineCoeffs.c -laserLineCoeffs.a*(frame.cols - 1)) / laserLineCoeffs.b;   // (-c -a*1279)/b
+
+        line(frame, PtStart, PtEnd, Scalar(255, 0, 0), 1);
+        imshow("LaserLine",frame);
+        cv::waitKey(1000/1000);
 #endif
 
     }
@@ -335,15 +342,10 @@ int Get2DLaserliner(int picnum)
 ////获取角点连线的直线方程
 int Get2DCornerliner(int picnum)
 {
-#if XXX
-    double a;
-    double b;
-    double c;
-#else
-    //vector<vector<LinearFuncCoefficients>> cornerPointLineCoeffs;  //to global
-    vector<LinearFuncCoefficients> tempVectorCoeffs;
-    LinearFuncCoefficients tempCoeffs;
-#endif
+    //vector<vector<LinearFunctionCoefficients>> cornerPointLineCoeffs;  //to global
+    vector<LinearFunctionCoefficients> tempVectorCoeffs;
+    LinearFunctionCoefficients tempCoeffs;
+
     vector<Point2d>  CornerLine_p2d(BOARD_SIZE_X);
 
     //input file
@@ -353,6 +355,10 @@ int Get2DCornerliner(int picnum)
     {
         sprintf(filename, "%d_laser.jpg", n);
 
+#ifdef GUI
+        Point2d PtStart , PtEnd;
+        Mat frame=imread(filename);
+#endif
         ///1:将mPic_2DChessboardPointSet中的2D点逐线解析出来
         for(int i=0; i<BOARD_SIZE_Y; i++) //height
         {
@@ -363,21 +369,28 @@ int Get2DCornerliner(int picnum)
             }
             cout << endl;
             ///2:拟合,每一行角点的直线方程
-#ifdef XXX
-            lineFit(CornerLine_p2d, a, b, c);
-
-            printf("a x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", a, b, c);
-            printf("a=%lf, b=%lf, c=%lf = 0\n", a, b, c);
-#else
             lineFit(CornerLine_p2d, tempCoeffs.a, tempCoeffs.b, tempCoeffs.c);
             printf("a x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", tempCoeffs.a, tempCoeffs.b, tempCoeffs.c);
             printf("a=%lf, b=%lf, c=%lf = 0\n", tempCoeffs.a, tempCoeffs.b, tempCoeffs.c);
 
             tempVectorCoeffs.push_back(tempCoeffs);
+
+#ifdef GUI
+            PtStart.x = 0;
+            PtStart.y = -tempCoeffs.c/tempCoeffs.b;  // -c/b
+
+            PtEnd.x = frame.cols - 1;
+            PtEnd.y = (-tempCoeffs.c -tempCoeffs.a*(frame.cols - 1)) / tempCoeffs.b;   // (-c -a*1279)/b
+
+            line(frame, PtStart, PtEnd, Scalar(0, 0, 255), 1);
 #endif
         }
         cornerPointLineCoeffs.push_back(tempVectorCoeffs);
 
+#ifdef GUI
+        imshow("LaserLine",frame);
+        cv::waitKey(2000/1000);
+#endif
     }
 
     delete(filename);

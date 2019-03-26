@@ -168,12 +168,7 @@ int CameraCalib()
 
                 //added for 4:C = RT x W
                 Mat real4NumPoint  = (Mat_<double>(4, 1) << 0, 10, 0, 1);
- /*
-                real4NumPoint[0] = i*square_size.width;
-                real4NumPoint[1] = i*square_size.height;
-                real4NumPoint[2] = 0;
-                real4NumPoint[3] = 1;
-*/
+
                 real4NumPoint.at<double>(0, 0) = i*square_size.width;
                 real4NumPoint.at<double>(1, 0) = j*square_size.height;
                 real4NumPoint.at<double>(2, 0) = 0;
