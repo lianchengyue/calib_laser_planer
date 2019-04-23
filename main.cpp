@@ -15,12 +15,15 @@ using namespace std;
 using namespace cv;
 
 extern MetadataFromPic metadata_of_pic;
-extern LinearFunctionCoefficients laserLineCoeffs;  //一条激光线在图像上坐标的直线方程
+extern vector<LinearFunctionCoefficients> laserLineCoeffs;  //一条激光线在图像上坐标的直线方程
 extern vector<vector<LinearFunctionCoefficients>> cornerPointLineCoeffs;   //ln在平面上的投影
 
 vector<vector<cv::Point2d>> cross_PtSet;
 
+//后期移动到.h文件中
 vector<PlanarFunctionCoefficients> BoardPlaneCoeffs;//标定板平面坐标系数
+vector<Point2d> LaserPlane;//标定板平面坐标系数
+cv::Mat LaserPlanarPointMat = cv::Mat::ones(BOARD_SIZE_Y*PICTURE_COUNT, 3, CV_64FC1);
 
 //https://blog.csdn.net/zwzsdy/article/details/69935602
 void Doolittle(int n,double *A,double *b)//n为阶数 A为系数矩阵 b为常数矩阵
@@ -70,7 +73,9 @@ void Doolittle(int n,double *A,double *b)//n为阶数 A为系数矩阵 b为常�
             }
             *(L + i*n + k) = *(L + i*n + k) / (*(U + k*n + k));
         }
-    } for (int i = 0; i < n; i++)//由Ly=b算y
+    }
+
+    for (int i = 0; i < n; i++)//由Ly=b算y
     {
         *(y + i) = *(b + i);
         for (int j = 0; j < i; j++)
@@ -78,6 +83,7 @@ void Doolittle(int n,double *A,double *b)//n为阶数 A为系数矩阵 b为常�
             *(y + i) = *(y + i) - *(L + i*n + j)*(*(y + j));
         }
     }
+
     for (int i = n-1; i >= 0; i--)//由Ux=y算x
     {
         *(x + i) = *(y + i);
@@ -88,10 +94,12 @@ void Doolittle(int n,double *A,double *b)//n为阶数 A为系数矩阵 b为常�
         *(x + i) = *(y + i) / (*(U + i*n + i));
     }
     cout << "解：\n";//得出解
+
     for (int i = 0; i < n; i++)
     {
         cout <<"x"<<i+1<<"："<< *(x + i) << endl;
     }
+
     delete[]L;//释放空间
     delete[]U;
     delete[]y;
@@ -244,6 +252,7 @@ int main(int argc, char *argv[])
     }
 #endif
     ///4:C = RT x W,获取棋盘格上的点在相机坐标系下的p3d
+    printf("\n\n4:C = RT x W,获取棋盘格上的点在相机坐标系下的p3d\n");
     //从图像中取3D点,世界3D->相机3D
 #ifdef TEST
     Mat PointW = (Mat_<double>(4, 1) << 0, 10, 0, 1);
@@ -308,7 +317,7 @@ int main(int argc, char *argv[])
     std::cout << "KKKmetadata_of_pic.mPic_CameraChessboard4NumPointSet[0]\n:" << metadata_of_pic.mPic_CameraChessboard4NumPointSet[0][2] << endl;
 
 #endif
-    ///5:计算得到ln, 即多点拟合空间中的直线
+    ///5:计算得到ln, 即多点拟合空间中的直线.      得到空间直线，暂时未用
     //直线方程是1：A1x+B1y+C1z+D1=0,A2x+B2y+C2z+D2=0,联立
     //2:空间直线的标准式(x-x0)/a＝(y-y0)/b＝(z-z0)/c, 其中(a,b,c)为方向向量
     //3:空间直线的两点式： (x-x1)/(x-x2)＝(y-y1)/(y-y2)＝(z-z1)/(z-z2), take this
@@ -330,6 +339,7 @@ int main(int argc, char *argv[])
 
     Get3DLinearValue(p3d);
 #else
+    printf("\n\n5:计算得到ln, 即多点拟合空间中的直线.      得到空间直线，暂时未用\n");
     vector<Point3d>  p3d(BOARD_SIZE_X/* - 1*/);  //解决malloc(): memory corruption
 
     for(int n=0; n<PicNum; n++)
@@ -369,8 +379,9 @@ int main(int argc, char *argv[])
 #endif
     ///5.1:拟合标定板平面
 #if 1
+    printf("\n\n5.1:拟合标定板平面\n");
     vector<Point3d> BoardP3d(BOARD_SIZE_X * BOARD_SIZE_Y);
-    cv::Mat InputPoints = cv::Mat::ones(BOARD_SIZE_X*BOARD_SIZE_Y,3,CV_64FC1);//cv::Mat::ones(rows,cols,CV_32FC1);
+    cv::Mat InputPoints = cv::Mat::ones(BOARD_SIZE_X*BOARD_SIZE_Y, 3, CV_64FC1);//cv::Mat::ones(rows,cols,CV_32FC1);
 
     for(int n=0; n<PicNum; n++)
     {
@@ -385,7 +396,7 @@ int main(int argc, char *argv[])
                 //printf("mPic_CameraChessboardPointSet=(%f,%f,%f)\n",metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].x, metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].y, metadata_of_pic.mPic_CameraChessboardPointSet[n][i*BOARD_SIZE_X + j].z);
         //error        //printf("AAInputPoints=(%f,%f,%f)\n",InputPoints.at<float>(i*BOARD_SIZE_X + j, 0), (i*BOARD_SIZE_X + j, 1), (i*BOARD_SIZE_X + j, 2));
                 //ok
-                printf("AAInputPoints=(%f,%f,%f)\n", InputPoints.at<double>(i*BOARD_SIZE_X + j, 0), InputPoints.at<double>(i*BOARD_SIZE_X + j, 1), InputPoints.at<double>(i*BOARD_SIZE_X + j, 2));
+                ///printf("AAInputPoints=(%f,%f,%f)\n", InputPoints.at<double>(i*BOARD_SIZE_X + j, 0), InputPoints.at<double>(i*BOARD_SIZE_X + j, 1), InputPoints.at<double>(i*BOARD_SIZE_X + j, 2));
 
             }
         }
@@ -423,7 +434,7 @@ int main(int argc, char *argv[])
         InputPoints.at<double>(i, 0) = X_vector[i];//矩阵的值进行初始化   X的坐标值
         InputPoints.at<double>(i, 1) = Y_vector[i];//  Y的坐标值
         InputPoints.at<double>(i, 2) = Z_vector[i]; //  Z的坐标值
-        printf("InputPoints=(%f,%f,%f)\n",InputPoints.at<double>(i, 0),InputPoints.at<double>(i, 1),InputPoints.at<double>(i, 2));
+        printf("InputPoints=(%f,%f,%f)\n", InputPoints.at<double>(i, 0),InputPoints.at<double>(i, 1),InputPoints.at<double>(i, 2));
     }
     //拟合标定板的平面
     Mat BoardPlane;
@@ -450,11 +461,12 @@ int main(int argc, char *argv[])
     printf("a x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", a, b, c);
     printf("a=%lf, b=%lf, c=%lf = 0\n", a, b, c);
 #else
+    printf("\n\n6:计算激光线在像素坐标系的方程Ax+By+c=0\n");
     Get2DLaserliner(PicNum);
 #endif
 
     ///7:计算每行角点连线在像素坐标系的方程Ax+By+c=0
-    printf("\n\nGet2DCornerliner \n");
+    printf("\n\n7:计算每行角点连线在像素坐标系的方程Ax+By+c=0\n");
     Get2DCornerliner(PicNum);
 
     ///delete,8:计算空间直线在像素坐标系的投影
@@ -476,6 +488,7 @@ int main(int argc, char *argv[])
     //y = (a1*c0 - a0*c1)/D
     //D = a0*b1 - a1*b0， (D为0时，表示两直线平行)
 
+    printf("\n\n8:计算,每行角点连线+激光线,在像素坐标的交点\n");
     //vector<vector<cv::Point2d>> cross_PtSet;  //to global
     GetCrossPoint(cornerPointLineCoeffs, laserLineCoeffs, cross_PtSet, PicNum, BOARD_SIZE_Y);
 
@@ -556,24 +569,22 @@ int main(int argc, char *argv[])
     Doolittle(3, InA, InB);
 #else
     //原理:https://blog.csdn.net/lyl771857509/article/details/79633412
+    printf("\n\n9:得到激光平面与ln的各个坐标Pi(xp,yp,zp)\n");
     //给3x4的相机内参矩阵赋值
-    CameraMatrix.at<double>(0, 0) = Intrinsics.at<double>(0, 0);
-    CameraMatrix.at<double>(0, 1) = Intrinsics.at<double>(0, 0);
-    CameraMatrix.at<double>(0, 2) = Intrinsics.at<double>(0, 0);
+    CameraMatrix.at<double>(0, 0) = metadata_of_pic.mPic_Intrinsics.at<double>(0, 0);
+    CameraMatrix.at<double>(0, 1) = metadata_of_pic.mPic_Intrinsics.at<double>(0, 0);
+    CameraMatrix.at<double>(0, 2) = metadata_of_pic.mPic_Intrinsics.at<double>(0, 0);
     CameraMatrix.at<double>(0, 3) = 0;
-    CameraMatrix.at<double>(1, 0) = Intrinsics.at<double>(1, 0);
-    CameraMatrix.at<double>(1, 1) = Intrinsics.at<double>(1, 0);
-    CameraMatrix.at<double>(1, 2) = Intrinsics.at<double>(1, 0);
+    CameraMatrix.at<double>(1, 0) = metadata_of_pic.mPic_Intrinsics.at<double>(1, 0);
+    CameraMatrix.at<double>(1, 1) = metadata_of_pic.mPic_Intrinsics.at<double>(1, 0);
+    CameraMatrix.at<double>(1, 2) = metadata_of_pic.mPic_Intrinsics.at<double>(1, 0);
     CameraMatrix.at<double>(1, 3) = 0;
-    CameraMatrix.at<double>(2, 0) = Intrinsics.at<double>(2, 0);
-    CameraMatrix.at<double>(2, 1) = Intrinsics.at<double>(2, 0);
-    CameraMatrix.at<double>(2, 2) = Intrinsics.at<double>(2, 0);
+    CameraMatrix.at<double>(2, 0) = metadata_of_pic.mPic_Intrinsics.at<double>(2, 0);
+    CameraMatrix.at<double>(2, 1) = metadata_of_pic.mPic_Intrinsics.at<double>(2, 0);
+    CameraMatrix.at<double>(2, 2) = metadata_of_pic.mPic_Intrinsics.at<double>(2, 0);
     CameraMatrix.at<double>(2, 3) = 0;
 
     //2D点+已知平面，得到相机坐标系下的3D坐标    2D点:cross_PtSet[n][i];
-    Point2d  testp2d;
-    testp2d.x = 740;   //u
-    testp2d.y = 580;   //v
     double aa = 1;
     double bb = 2;
     double cc = 3;
@@ -581,10 +592,26 @@ int main(int argc, char *argv[])
 
     Mat _2Dto3DMat = Mat(3,3,CV_64FC1,Scalar::all(0));
 
+    int PtSet_valid_num = 0;
+
     for(int n=0; n<PicNum; n++)
     {
-        for(int i=0; i<BOARD_SIZE_Y; i++)
+        aa = BoardPlaneCoeffs[n].a;
+        bb = BoardPlaneCoeffs[n].b;
+        cc = BoardPlaneCoeffs[n].c;
+        dd = BoardPlaneCoeffs[n].d;
+
+        for(int i=0; i<BOARD_SIZE_Y; i++)   //BOARD_SIZE_Y==8
         {
+            //抛弃图像之外的点
+            if(0 == cross_PtSet[n][i].x && 0 == cross_PtSet[n][i].x)
+            {
+                LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 0) = 0;
+                LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 1) = 0;
+                LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 2) = 0;
+                continue;
+            }
+
             //Zc*[u,v,1] = CameraMatrix(3X4) * [Xc,Yc,Zc,1]
             //|
             //v
@@ -602,12 +629,12 @@ int main(int argc, char *argv[])
             //[fx, 0, (u0-u)]   [Xc]   [0 ]
             //[0, fy, (v0-v)] * [Yc] = [0 ]
             //[A,  B,    C  ]   [Zc]   [-D]
-            _2Dto3DMat.at<double>(0, 0) = Intrinsics.at<double>(0, 0);
+            _2Dto3DMat.at<double>(0, 0) = metadata_of_pic.mPic_Intrinsics.at<double>(0, 0);
             _2Dto3DMat.at<double>(0, 1) = 0;
-            _2Dto3DMat.at<double>(0, 2) = Intrinsics.at<double>(0, 2) - cross_PtSet[n][i].x;// -u
+            _2Dto3DMat.at<double>(0, 2) = metadata_of_pic.mPic_Intrinsics.at<double>(0, 2) - cross_PtSet[n][i].x;// -u
             _2Dto3DMat.at<double>(1, 0) = 0;
-            _2Dto3DMat.at<double>(1, 1) = Intrinsics.at<double>(1, 1);
-            _2Dto3DMat.at<double>(1, 2) = Intrinsics.at<double>(1, 2) - cross_PtSet[n][i].y;// -v
+            _2Dto3DMat.at<double>(1, 1) = metadata_of_pic.mPic_Intrinsics.at<double>(1, 1);
+            _2Dto3DMat.at<double>(1, 2) = metadata_of_pic.mPic_Intrinsics.at<double>(1, 2) - cross_PtSet[n][i].y;// -v
             _2Dto3DMat.at<double>(2, 0) = aa;
             _2Dto3DMat.at<double>(2, 1) = bb;
             _2Dto3DMat.at<double>(2, 2) = cc;
@@ -622,13 +649,53 @@ int main(int argc, char *argv[])
             //CV_SVD - 奇异值分解法 (SVD)
             //CV_SVD_SYM - 对正定对称矩阵的 SVD 方法
             cv::solve(_2Dto3DMat, _00D, XcYcZc, CV_LU);  //DECOMP_LU
-            //SVD::solveZ(_2Dto3DMat, _00D, XcYcZc);
+            //cv::SVD::solveZ(_2Dto3DMat, _00D, XcYcZc);
 #ifdef DEBUG
             std::cout << "第" << n << "张图的第" << i <<"个激光与角点连线的交点:XcYcZc" << XcYcZc<< endl;
 #endif
+            ///Point3d LaserPlanarPoint;
+            //LaserPlanarPoint.x = XcYcZc.at<double>(0, 0);
+            //LaserPlanarPoint.y = XcYcZc.at<double>(1, 0);
+            //LaserPlanarPoint.z = XcYcZc.at<double>(2, 0);
+            //
+            ///cv::Mat LaserPlanarPointMat = cv::Mat::ones(BOARD_SIZE_Y*PicNum, 3, CV_64FC1);  //to global
+            LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 0) = XcYcZc.at<double>(0, 0);
+            LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 1) = XcYcZc.at<double>(1, 0);
+            LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 2) = XcYcZc.at<double>(2, 0);
+
+            //LaserPlane.push_back(LaserPlanarPoint);
+            PtSet_valid_num++;
         }
 
     }
+
+    ///拟合激光平面
+    Mat myLaserPlane;
+
+    cv::Mat LaserPlanarPointMat_valid = cv::Mat::ones(PtSet_valid_num, 3, CV_64FC1);
+    int num = 0;
+    for(int n=0; n<PicNum; n++)
+    {
+        for(int i=0; i<BOARD_SIZE_Y; i++)
+        {
+            if(0 == LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 0)
+                    && 0 == LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 0)
+                    && 0 == LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 0))
+
+            {
+                continue;
+            }
+            else
+            {
+                LaserPlanarPointMat_valid.at<double>(num, 0) = LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 0);
+                LaserPlanarPointMat_valid.at<double>(num, 1) = LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 1);
+                LaserPlanarPointMat_valid.at<double>(num, 2) = LaserPlanarPointMat.at<double>(n*BOARD_SIZE_Y+i, 2);
+                num++;
+            }
+        }
+    }
+    FitPlane(LaserPlanarPointMat_valid, myLaserPlane);
+
 #endif
     ///9:通过计算得到的多个3D激光点，拟合得到空间中激光平面与标定板平面的3D直线
     ///10:得到多组图像标定板与激光平面的N个交点，拟合激光平面.  ("N个交点"为ln与激光平面的交点)

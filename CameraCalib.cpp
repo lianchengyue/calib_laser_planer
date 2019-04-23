@@ -8,6 +8,7 @@ using namespace cv;
 using namespace std;
 
 MetadataFromPic metadata_of_pic;
+Size image_size;  /* 图像的尺寸 */
 
 int initMetadata(int pic_num, int board_size_x, int board_size_y)
 {
@@ -48,7 +49,7 @@ int CameraCalib()
     //读取每一幅图像，从中提取出角点，然后对角点进行亚像素精确化
     cout<<"开始提取角点………………";
     int image_count=0;  /* 图像数量 */
-    Size image_size;  /* 图像的尺寸 */
+    //Size image_size;  /* 图像的尺寸 */
     //Size board_size = Size(4,6);    /* 标定板上每行、列的角点数 */
     Size board_size = Size(BOARD_SIZE_X,BOARD_SIZE_Y); //before(6,9);   /* 标定板上每行、列的角点数 */
     vector<Point2f> image_points_buf;  /* 缓存每幅图像上检测到的角点 */

@@ -46,7 +46,7 @@ int FitPlane(const cv::Mat &Inputpoints, cv::Mat& plane)
             points2.at<double>(i,j) = Inputpoints.at<double>(i,j) - centroid.at<double>(0,j);
             //cout << "  points2.at<double>("<< i<< "," << j << ") :"<< points2.at<double>(i,j);
         }
-        cout << endl;
+        //cout << endl;
     }
 
     ///3:Evaluate SVD of covariance matrix.

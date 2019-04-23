@@ -6,7 +6,7 @@ using namespace cv;
 
 extern MetadataFromPic metadata_of_pic;
 
-LinearFunctionCoefficients laserLineCoeffs;  //一条激光线在图像上坐标的直线方程
+vector<LinearFunctionCoefficients> laserLineCoeffs;  //一条激光线在图像上坐标的直线方程
 vector<vector<LinearFunctionCoefficients>> cornerPointLineCoeffs;   //ln在平面上的投影
 
 ///从图像中计算得到亚像素级的二维点
@@ -103,7 +103,7 @@ int StegerLine(std::vector<cv::Point2d> &p2d)
         }
     }
 
-    printf("图像中获取激光点的个数t.size()/2=%d\n\n", Pt.size()/2);
+    printf("图像中获取激光点的个数:%d\n\n", Pt.size()/2);
     for (int k = 0;k<Pt.size()/2;k++)
     {
         Point rpt;
@@ -217,7 +217,7 @@ int StegerLine2(char* filename,std::vector<cv::Point2d> &p2d)
         }
     }
 
-    printf("图像中获取激光点的个数t.size()/2=%d\n\n", Pt.size()/2);
+    printf("图像中获取激光点的个数:%d\n\n", Pt.size()/2);
     for (int k = 0;k<Pt.size()/2;k++)
     {
         Point rpt;
@@ -294,7 +294,8 @@ bool lineFit(/*const */std::vector<cv::Point2d> &points, double &a, double &b, d
 //获取所有图像的激光直线方程ax+by+c=0
 int Get2DLaserliner(int picnum)
 {
-    //LinearFuncCoefficients laserLineCoeffs;  ////to global
+    //vector<LinearFunctionCoefficients> laserLineCoeffs;  ////to global
+    LinearFunctionCoefficients tmplaserLineCoeffs;
 
     vector<Point2d>  p2d;
 
@@ -312,9 +313,13 @@ int Get2DLaserliner(int picnum)
         //根据得到的激光点拟合直线
 
         //为laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c赋值
-        lineFit(p2d, laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c);
-        printf("a x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c);
-        printf("a=%lf, b=%lf, c=%lf = 0\n", laserLineCoeffs.a, laserLineCoeffs.b, laserLineCoeffs.c);
+        lineFit(p2d, tmplaserLineCoeffs.a, tmplaserLineCoeffs.b, tmplaserLineCoeffs.c);
+        //给激光线的2D方程赋值
+        laserLineCoeffs.push_back(tmplaserLineCoeffs);
+
+        printf("\n\n第%d张图像中的激光直线方程ax+by+c=0如下：\n", i);
+        printf("a x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", laserLineCoeffs[i].a, laserLineCoeffs[i].b, laserLineCoeffs[i].c);
+        printf("a=%lf, b=%lf, c=%lf = 0\n", laserLineCoeffs[i].a, laserLineCoeffs[i].b, laserLineCoeffs[i].c);
 
 #ifdef GUI
         Point2d PtStart , PtEnd;
@@ -322,14 +327,14 @@ int Get2DLaserliner(int picnum)
 
 
         PtStart.x = 0;
-        PtStart.y = -laserLineCoeffs.c/laserLineCoeffs.b;  // -c/b
+        PtStart.y = -laserLineCoeffs[i].c/laserLineCoeffs[i].b;  // -c/b
 
         PtEnd.x = frame.cols - 1;
-        PtEnd.y = (-laserLineCoeffs.c -laserLineCoeffs.a*(frame.cols - 1)) / laserLineCoeffs.b;   // (-c -a*1279)/b
+        PtEnd.y = (-laserLineCoeffs[i].c -laserLineCoeffs[i].a*(frame.cols - 1)) / laserLineCoeffs[i].b;   // (-c -a*1279)/b
 
         line(frame, PtStart, PtEnd, Scalar(255, 0, 0), 1);
         imshow("LaserLine",frame);
-        cv::waitKey(1000/1000);
+        cv::waitKey(41);
 #endif
 
     }
@@ -370,7 +375,7 @@ int Get2DCornerliner(int picnum)
             cout << endl;
             ///2:拟合,每一行角点的直线方程
             lineFit(CornerLine_p2d, tempCoeffs.a, tempCoeffs.b, tempCoeffs.c);
-            printf("a x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", tempCoeffs.a, tempCoeffs.b, tempCoeffs.c);
+            printf("a x + b y + c = 0\n%lfx + %lfy + %lf = 0\n", n, i,tempCoeffs.a, tempCoeffs.b, tempCoeffs.c);
             printf("a=%lf, b=%lf, c=%lf = 0\n", tempCoeffs.a, tempCoeffs.b, tempCoeffs.c);
 
             tempVectorCoeffs.push_back(tempCoeffs);
@@ -387,9 +392,11 @@ int Get2DCornerliner(int picnum)
         }
         cornerPointLineCoeffs.push_back(tempVectorCoeffs);
 
+        vector<LinearFunctionCoefficients>().swap(tempVectorCoeffs);//added by flq,  清空临时的vector
+
 #ifdef GUI
         imshow("LaserLine",frame);
-        cv::waitKey(2000/1000);
+        cv::waitKey(41);
 #endif
     }
 

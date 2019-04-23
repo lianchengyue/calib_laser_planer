@@ -15,7 +15,7 @@
 using namespace std;
 
 int GetCrossPoint(vector<vector<LinearFunctionCoefficients>> mycornerPointLineCoeffs,
-                  LinearFunctionCoefficients mylaserLineCoeffs,
+                  vector<LinearFunctionCoefficients> mylaserLineCoeffs,
                   vector<vector<cv::Point2d>>& cross_PtSet,
                   int PicNum,
                   int board_size_y
