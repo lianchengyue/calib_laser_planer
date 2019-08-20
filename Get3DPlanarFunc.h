@@ -17,6 +17,9 @@ typedef struct PlanarFunctionCoefficients
     double d;
 } PlanarFunctionCoefficients;
 
-int FitPlane(const cv::Mat &points, cv::Mat& plane);
+//
+int FitBoardPlane(const cv::Mat &points, cv::Mat& plane);
+//
+int FitLaserPlane(const cv::Mat &points, cv::Mat& plane, int PtSet_num);
 
 #endif // GET3DPLANARFUNC_H

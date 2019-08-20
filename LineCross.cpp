@@ -1,6 +1,6 @@
 #include "LineCross.h"
 
-extern cv::Size image_size;  /* 图像的尺寸 */
+#include "utils.h"
 
 ///8:计算,每行角点连线+激光线,在像素坐标的交点
 //F0(x) = a0*x + b0*y + c0 = 0, F1(x) = a1*x + b1*y + c1 = 0
@@ -25,6 +25,10 @@ int GetCrossPoint(vector<vector<LinearFunctionCoefficients>> mycornerPointLineCo
     double a0,b0,c0 = 0;
     double a1,b1,c1 = 0;
     vector<cv::Point2d> tmp_cross_Pt;
+    //图像的尺寸
+    cv::Size image_size;
+    image_size.width = IMG_WIDTH;
+    image_size.height = IMG_HEIGHT;
 
     for(int n=0; n<PicNum; n++)
     {
@@ -52,6 +56,9 @@ int GetCrossPoint(vector<vector<LinearFunctionCoefficients>> mycornerPointLineCo
             double D = a0*b1 - a1*b0;
             double x = (b0*c1 - b1*c0) / D;
             double y = (a1*c0 - a0*c1) / D;
+            //交点的2D坐标
+            cout << "交点的2D坐标:" << "(" << x <<","<< y << ")" << endl;
+
 
             if(x>0 && x<image_size.width && y>0 && y<image_size.height) //if(1)
             {

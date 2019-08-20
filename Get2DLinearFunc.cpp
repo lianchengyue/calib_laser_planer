@@ -1,6 +1,11 @@
 #include "Get2DLinearFunc.h"
 
+#ifdef DO_CALIB
 #include "CameraCalib.h"
+#else
+#include "CameraRemap.h"
+#endif
+
 using namespace std;
 using namespace cv;
 
@@ -12,6 +17,9 @@ vector<vector<LinearFunctionCoefficients>> cornerPointLineCoeffs;   //ln在平�
 ///从图像中计算得到亚像素级的二维点
 ///ScanThread::FindBrightestPointInRow,找到每一行中最亮的点
 ///p2d: 从图像中获取到的二维点坐标
+
+
+//对于二维图像，线条边缘中心点处的一阶导数为0，且二阶方向导数取极小值的点就是线条边缘中心点。
 int StegerLine(std::vector<cv::Point2d> &p2d)
 {
     Mat img0 = imread("2.bmp", 1); //0_laser.jpg  //2.bmp
@@ -74,6 +82,9 @@ int StegerLine(std::vector<cv::Point2d> &p2d)
                 //https://blog.csdn.net/zhengwei223/article/details/78913898
                 cv::eigen(hessian, eValue, eVectors);
 
+                ///nx:特征向量
+                ///ny:特征向量
+                ///t:对t求微分
                 double nx, ny;
                 double fmaxD = 0;
                 //fabs功能：求浮点数x的绝对值
@@ -144,6 +155,7 @@ int StegerLine2(char* filename,std::vector<cv::Point2d> &p2d)
     m2 = (Mat_<float>(2, 1) << 1, -1);  //y偏导
 
     Mat dx, dy;
+    ///卷积，求一阶偏导.    m1,m2:卷积核
     filter2D(img, dx, CV_32FC1, m1);
     filter2D(img, dy, CV_32FC1, m2);
 
@@ -153,6 +165,7 @@ int StegerLine2(char* filename,std::vector<cv::Point2d> &p2d)
     m5 = (Mat_<float>(2, 2) << 1, -1, -1, 1);  //二阶xy偏导
 
     Mat dxx, dyy, dxy;
+    ///卷积，求二阶偏导, dxx.cols=1280, dxx.rows=960
     filter2D(img, dxx, CV_32FC1, m3);
     filter2D(img, dyy, CV_32FC1, m4);
     filter2D(img, dxy, CV_32FC1, m5);
@@ -191,6 +204,7 @@ int StegerLine2(char* filename,std::vector<cv::Point2d> &p2d)
                 double nx, ny;
                 double fmaxD = 0;
                 //fabs功能：求浮点数x的绝对值
+                ///hessian矩阵的两个特征值分别为图像灰度函数的二阶导数的极大值和极小值
                 if (fabs(eValue.at<float>(0,0))>= fabs(eValue.at<float>(1,0))) //求特征值最大时对应的特征向量
                 {
                     nx = eVectors.at<float>(0, 0);
@@ -206,6 +220,7 @@ int StegerLine2(char* filename,std::vector<cv::Point2d> &p2d)
 
                 double t = -(nx*dx.at<float>(j, i) + ny*dy.at<float>(j, i)) / (nx*nx*dxx.at<float>(j,i)+2*nx*ny*dxy.at<float>(j,i)+ny*ny*dyy.at<float>(j,i));
 
+                ///if true: 一阶导数为零的点位于当前像素内
                 if (fabs(t*nx)<=0.5 && fabs(t*ny)<=0.5)
                 {
 
@@ -304,10 +319,15 @@ int Get2DLaserliner(int picnum)
     memset(filename, 0, 256);
     for(int i=0; i<picnum; i++)
     {
+        #ifdef HOME
+        sprintf(filename, "../calib_laser_planer/TQQ/left/%d_laser.bmp", i);//%d_laser.bmp
+        #else
         sprintf(filename, "%d_laser.jpg", i);
+        #endif
 
         ///1:图像中的激光线方程
         //得到所有的激光点p2d
+        vector<cv::Point2d>().swap(p2d);//added by flq,  清空临时的vector
         StegerLine2(filename, p2d);
         ///2:拟合,激光条投影在标定板上的直线
         //根据得到的激光点拟合直线
@@ -325,16 +345,27 @@ int Get2DLaserliner(int picnum)
         Point2d PtStart , PtEnd;
         Mat frame=imread(filename);
 
-
+        #ifdef HOME
+        //激光是竖的
+        PtStart.y = 0;
+        PtStart.x = (-laserLineCoeffs[i].c) / laserLineCoeffs[i].a;  // -c/a
+        PtEnd.y = frame.rows - 1;
+        PtEnd.x = (-laserLineCoeffs[i].c -laserLineCoeffs[i].b*(frame.rows - 1)) / laserLineCoeffs[i].a;   // (-c -b*959)/a
+        #else
+        //激光是横的
+/*
         PtStart.x = 0;
         PtStart.y = -laserLineCoeffs[i].c/laserLineCoeffs[i].b;  // -c/b
 
         PtEnd.x = frame.cols - 1;
         PtEnd.y = (-laserLineCoeffs[i].c -laserLineCoeffs[i].a*(frame.cols - 1)) / laserLineCoeffs[i].b;   // (-c -a*1279)/b
+*/
+        #endif
+
 
         line(frame, PtStart, PtEnd, Scalar(255, 0, 0), 1);
         imshow("LaserLine",frame);
-        cv::waitKey(41);
+        cv::waitKey(4000);
 #endif
 
     }
@@ -358,16 +389,20 @@ int Get2DCornerliner(int picnum)
     memset(filename, 0, 256);
     for(int n=0; n<picnum; n++)
     {
+#ifdef HOME
+        sprintf(filename, "../calib_laser_planer/TQQ/left/%d.bmp", n);
+#else
         sprintf(filename, "%d_laser.jpg", n);
+#endif
 
 #ifdef GUI
         Point2d PtStart , PtEnd;
         Mat frame=imread(filename);
 #endif
         ///1:将mPic_2DChessboardPointSet中的2D点逐线解析出来
-        for(int i=0; i<BOARD_SIZE_Y; i++) //height
+        for(int i=0; i < BOARD_SIZE_Y; i++) //height
         {
-            for(int j=0; j<BOARD_SIZE_X; j++) //width
+            for(int j=0; j < BOARD_SIZE_X; j++) //width
             {
                 CornerLine_p2d[j] = metadata_of_pic.mPic_2DChessboardPointSet[n][i*BOARD_SIZE_X + j];
                 cout << "CornerLine_p2d[" << j << "]" << CornerLine_p2d[j] <<endl;
@@ -396,7 +431,7 @@ int Get2DCornerliner(int picnum)
 
 #ifdef GUI
         imshow("LaserLine",frame);
-        cv::waitKey(41);
+        cv::waitKey(4000);
 #endif
     }
 
